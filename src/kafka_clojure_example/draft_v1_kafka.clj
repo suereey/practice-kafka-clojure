@@ -23,6 +23,8 @@
 
 ;; how to create producer?
 (def producer (KafkaProducer. producer-prop))
+(type producer)
+#_=> clojure.lang.Var$Unbound
 ;; producer start running
 
 (def topic "example-topic")
