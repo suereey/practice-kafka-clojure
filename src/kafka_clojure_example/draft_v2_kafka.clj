@@ -1,4 +1,4 @@
-(ns kafka-clojure-example.core
+(ns kafka-clojure-example.draft-v2-kafka
   (:gen-class)
   (:import (java.time Duration)
            (java.util Arrays Properties)
@@ -33,6 +33,7 @@
     props))
 
 
+;; consumer
 (defn consumer-config
   [kafka-client-config]
   (let [consumer-config (:consumer @kafka-client-config)
@@ -43,6 +44,7 @@
     (.setProperty props ConsumerConfig/GROUP_ID_CONFIG (consumer-config "group.id"))
     props))
 
+;; put consuemr in let
 (defn consumer-config
   [kafka-client-config]
   (let [consumer-config (:consumer @kafka-client-config)
@@ -68,8 +70,8 @@
 
 
          assoc :producer (let [producer-props (producer-config kafka-client-config)
-                                      producer       (producer producer-props)]
-                                  producer)))
+                               producer       (producer producer-props)]
+                           producer)))
 
 (defn consumer
   [props]
@@ -116,7 +118,7 @@
   ((:producer @kafka-client-config) "value.serializer")
   #_=> "org.apache.kafka.common.serialization.StringSerializer"
 
-  ;; this one works
+  ;; example 1
   (let [props (Properties.)
         _     (.setProperty props ProducerConfig/BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092")
         _     (.setProperty props ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
@@ -125,6 +127,7 @@
     props)
 
 
+  ;; example 2 using doto is the same as the code above
   ;; this one also works, if i want to put things into the let binding
   (let [props (doto (Properties.)
                 (.setProperty ProducerConfig/BOOTSTRAP_SERVERS_CONFIG "127.0.0.1:9092")
@@ -132,7 +135,7 @@
                 (.setProperty ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer"))]
     props)
 
-  ;; why this one is not working?
+  ;; why this one is not working, the return of .setProperty is no longer props.
   (let [props (-> (Properties.)
                   (.setProperty ProducerConfig/BOOTSTRAP_SERVERS_CONFIG "127.0.0.1:9092")
                   (.setProperty ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
