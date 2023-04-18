@@ -83,4 +83,7 @@
   #_=> org.apache.kafka.clients.consumer.ConsumerRecords
 
   (iterator-seq my-last-records)
+  (rest [1 2 3])
+  (cons [1 2 3] [4])
   )
+

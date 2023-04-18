@@ -3,174 +3,245 @@
   (:import (java.time Duration)
            (java.util Arrays Properties)
            (org.apache.kafka.clients.producer Callback KafkaProducer ProducerConfig ProducerRecord)
-           (org.apache.kafka.clients.consumer ConsumerConfig KafkaConsumer)
-           ))
+           (org.apache.kafka.clients.consumer ConsumerConfig KafkaConsumer)))
 
-(def bootstrap-server (atom "127.0.0.1:9092"))
-(def key-serializer (atom "org.apache.kafka.common.serialization.StringSerializer"))
-(def value-serializer (atom "org.apache.kafka.common.serialization.StringSerializer"))
-(def key-deserializer (atom "org.apache.kafka.common.serialization.StringDeserializer"))
-(def value-deserializer (atom "org.apache.kafka.common.serialization.StringDeserializer"))
-(def group-id (atom "clojure_example_group"))
+;;forward declare functions that are used in atoms
+;; (declear function-name)
 
-(def topic (atom "example-topic"))
-(def k (atom "example-key"))
-(def v (atom "example-value: hello world!"))
+(def kafka-client-config (atom {:producer {ProducerConfig/BOOTSTRAP_SERVERS_CONFIG      "127.0.0.1:9092"
+                                           ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG   "org.apache.kafka.common.serialization.StringSerializer"
+                                           ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer"}
+                                :consumer {ConsumerConfig/BOOTSTRAP_SERVERS_CONFIG        "127.0.0.1:9092"
+                                           ConsumerConfig/KEY_DESERIALIZER_CLASS_CONFIG   "org.apache.kafka.common.serialization.StringDeserializer"
+                                           ConsumerConfig/VALUE_DESERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringDeserializer"
+                                           ConsumerConfig/GROUP_ID_CONFIG                 "clojure_example_group"}}))
 
-(def duration (atom (Duration/ofMillis 1000)))
-
-(defn producer-prop
-  [bootstrap-server key-serializer value-serializer]
-  (let [props (Properties.)]
-    (.setProperty props ProducerConfig/BOOTSTRAP_SERVERS_CONFIG (deref bootstrap-server))
-    (.setProperty props ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG (deref key-serializer))
-    (.setProperty props ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG (deref value-serializer))
+(defn producer-config
+  [kafka-client-config]
+  (let [producer-config (:producer @kafka-client-config)
+        props           (Properties.)]
+    (.setProperty props ProducerConfig/BOOTSTRAP_SERVERS_CONFIG (producer-config "bootstrap.servers"))
+    (.setProperty props ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG (producer-config "key.serializer"))
+    (.setProperty props ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG (producer-config "value.serializer"))
     props))
 
-(defn consumer-prop
-  [bootstrap-server key-deserializer value-deserializer group_id]
-  (let [props (Properties.)]
-    (.setProperty props ConsumerConfig/BOOTSTRAP_SERVERS_CONFIG (deref bootstrap-server))
-    (.setProperty props ConsumerConfig/KEY_DESERIALIZER_CLASS_CONFIG (deref key-deserializer))
-    (.setProperty props ConsumerConfig/VALUE_DESERIALIZER_CLASS_CONFIG (deref value-deserializer))
-    (.setProperty props ConsumerConfig/GROUP_ID_CONFIG (deref group_id))
+(defn consumer-config
+  [kafka-client-config]
+  (let [consumer-config (:consumer @kafka-client-config)
+        props           (Properties.)]
+    (.setProperty props ConsumerConfig/BOOTSTRAP_SERVERS_CONFIG (consumer-config "bootstrap.servers"))
+    (.setProperty props ConsumerConfig/KEY_DESERIALIZER_CLASS_CONFIG (consumer-config "key.deserializer"))
+    (.setProperty props ConsumerConfig/VALUE_DESERIALIZER_CLASS_CONFIG (consumer-config "value.deserializer"))
+    (.setProperty props ConsumerConfig/GROUP_ID_CONFIG (consumer-config "group.id"))
     props))
+
+(defn consumer-config
+  [kafka-client-config]
+  (let [consumer-config (:consumer @kafka-client-config)
+        props           (Properties.)]
+    (.setProperty props ConsumerConfig/BOOTSTRAP_SERVERS_CONFIG (consumer-config "bootstrap.servers"))
+    (.setProperty props ConsumerConfig/KEY_DESERIALIZER_CLASS_CONFIG (consumer-config "key.deserializer"))
+    (.setProperty props ConsumerConfig/VALUE_DESERIALIZER_CLASS_CONFIG (consumer-config "value.deserializer"))
+    (.setProperty props ConsumerConfig/GROUP_ID_CONFIG (consumer-config "group.id"))
+    props))
+
+(defn consumer-config
+  [kafka-client-config]
+  (let [props (doto (Properties.)
+                (.setProperty ProducerConfig/BOOTSTRAP_SERVERS_CONFIG "127.0.0.1:9092")
+                (.setProperty ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
+                (.setProperty ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer"))]
+    props))
+
+
+(def client (atom {:producer nil
+                   :consumer nil}))
 
 (defn producer
   [props]
   (KafkaProducer. props))
 
+
+(defn update-producer-client!
+  [kafka-client-config client]
+  (swap! client :producer (let [producer-props (producer-config kafka-client-config)
+                                producer (producer producer-props)]
+                            producer)))
+
+
 (defn consumer
   [props]
   (KafkaConsumer. props))
 
-;; record
-(defn record
-  [topic k v]
-  (ProducerRecord. (deref topic) (deref k) (deref v)))
+(defn update-consumer-client!
+  [kafka-client-config client]
+  (swap! client :consumer (let [consumer-props (consumer-config kafka-client-config)
+                                consumer (consumer consumer-props)]
+                            consumer)))
 
-(defn producer-send-record
-  [producer record]
-  (.send producer record))
+(defn consume-message
+  [consumer]
+  (let [records     ( consumer (Duration/ofMillis 1000))
+        seq-records (iterator-seq (.iterator records))]
+    (println "key: " map #(.key %) seq-records "\n value: " map #(.value %) seq-records)))
 
-(defn close-producer
-  [producer]
-  (.close producer))
-
-(defn consumer-subscribe
-  [topic consumer]
-  (.subscribe consumer [(deref topic)]))
-
-(defn consumer-message
-  [consumer duration]
-  (let [records (.poll consumer (deref duration))]
-    (doseq [record records]
-      (println "message is: " (.value record)))))
-
-
-(defn consumer-message
-  [consumer duration]
-  (let [records (.poll consumer (deref duration))]))
-
-
-
-(def clients nil)
-
-;; how to create consumer
-
-(.subscribe consumer [topic])
-
-(let [records (.poll consumer (Duration/ofMillis 1000))
-      _       (def my-last-records records)]
-  (println "key: " (.key records))
-
-  )
-
-
-(type my-last-records)
 
 ;; Rich Commenting Block
 (comment
+  (type kafka-client-config)
+  #_=> clojure.lang.Atom
 
-  [bootstrap-server key-serializer value-serializer]
-  #_=>
-  [#object[clojure.lang.Atom 0x7a5ca2ff {:status :ready, :val "127.0.0.1:9092"}]
-   #object[clojure.lang.Atom 0x149e60f9 {:status :ready, :val "org.apache.kafka.common.serialization.StringSerializer"}]
-   #object[clojure.lang.Atom 0x4fdd87d6 {:status :ready, :val "org.apache.kafka.common.serialization.StringSerializer"}]]
-
-  (producer-prop bootstrap-server key-serializer value-serializer)
+  (:producer @kafka-client-config)
   #_=>
   {"bootstrap.servers" "127.0.0.1:9092",
+   "key.serializer"    "org.apache.kafka.common.serialization.StringSerializer",
+   "value.serializer"  "org.apache.kafka.common.serialization.StringSerializer"}
+
+  (type (:producer @kafka-client-config))
+  #_=> clojure.lang.PersistentArrayMap
+
+  ({"bootstrap.servers" "127.0.0.1:9092",
+    "key.serializer"    "org.apache.kafka.common.serialization.StringSerializer",
+    "value.serializer"  "org.apache.kafka.common.serialization.StringSerializer"} "bootstrap.servers")
+  #_=> "127.0.0.1:9092"
+
+  ((:producer @kafka-client-config) "bootstrap.servers")
+  #_=> "127.0.0.1:9092"
+
+  ((:producer @kafka-client-config) "key.serializer")
+  #_=> "org.apache.kafka.common.serialization.StringSerializer"
+
+  ((:producer @kafka-client-config) "value.serializer")
+  #_=> "org.apache.kafka.common.serialization.StringSerializer"
+
+  ;; this one works
+  (let [props (Properties.)]
+    (.setProperty props ProducerConfig/BOOTSTRAP_SERVERS_CONFIG, "127.0.0.1:9092")
+    (.setProperty props ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
+    (.setProperty props ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
+    props)
+
+  ;; this one also works, if i want to put things into the let binding
+  (let [props (doto (Properties.)
+                (.setProperty ProducerConfig/BOOTSTRAP_SERVERS_CONFIG "127.0.0.1:9092")
+                (.setProperty ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
+                (.setProperty ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer"))]
+    props)
+
+  ;; why this one is not working?
+  (let [props (-> (Properties.)
+                  (.setProperty ProducerConfig/BOOTSTRAP_SERVERS_CONFIG "127.0.0.1:9092")
+                  (.setProperty ProducerConfig/KEY_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer")
+                  (.setProperty ProducerConfig/VALUE_SERIALIZER_CLASS_CONFIG "org.apache.kafka.common.serialization.StringSerializer"))]
+    props)
+
+  (producer-config kafka-client-config)
+  #_=> {"bootstrap.servers" "127.0.0.1:9092",
    "value.serializer" "org.apache.kafka.common.serialization.StringSerializer",
    "key.serializer" "org.apache.kafka.common.serialization.StringSerializer"}
 
-  [bootstrap-server key-deserializer value-deserializer group-id]
+  (:consumer @kafka-client-config)
   #_=>
-  [#object[clojure.lang.Atom 0x7a5ca2ff {:status :ready, :val "127.0.0.1:9092"}]
-   #object[clojure.lang.Atom 0x5bd51056 {:status :ready, :val "org.apache.kafka.common.serialization.StringDeserializer"}]
-   #object[clojure.lang.Atom 0x346de55f {:status :ready, :val "org.apache.kafka.common.serialization.StringDeserializer"}]
-   #object[clojure.lang.Atom 0x7bac7ec2 {:status :ready, :val "clojure_example_group"}]]
+  {"bootstrap.servers" "127.0.0.1:9092",
+   "key.deserializer" "org.apache.kafka.common.serialization.StringDeserializer",
+   "value.deserializer" "org.apache.kafka.common.serialization.StringDeserializer",
+   "group.id" "clojure_example_group"}
 
-  (consumer-prop bootstrap-server key-deserializer value-deserializer group-id)
+  (consumer-config kafka-client-config)
   #_=>
   {"key.deserializer" "org.apache.kafka.common.serialization.StringDeserializer",
-     "bootstrap.servers" "127.0.0.1:9092",
-     "group.id" "clojure_example_group",
-     "value.deserializer" "org.apache.kafka.common.serialization.StringDeserializer"}
+   "bootstrap.servers" "127.0.0.1:9092",
+   "group.id" "clojure_example_group",
+   "value.deserializer" "org.apache.kafka.common.serialization.StringDeserializer"}
 
-  (producer {"bootstrap.servers" "127.0.0.1:9092",
-             "value.serializer" "org.apache.kafka.common.serialization.StringSerializer",
-             "key.serializer" "org.apache.kafka.common.serialization.StringSerializer"})
-  (consumer {"key.deserializer" "org.apache.kafka.common.serialization.StringDeserializer",
-             "bootstrap.servers" "127.0.0.1:9092",
-             "group.id" "clojure_example_group",
-             "value.deserializer" "org.apache.kafka.common.serialization.StringDeserializer"})
+  (type (consumer-config kafka-client-config))
+  #_=> java.util.Properties
 
-  [topic k v]
-  #_=>
-  [#object[clojure.lang.Atom 0x99d37cc {:status :ready, :val "example-topic"}]
-   #object[clojure.lang.Atom 0x5258de05 {:status :ready, :val "example-key"}]
-   #object[clojure.lang.Atom 0x4de42d29 {:status :ready, :val "example-value: hello world!"}]]
+  client
+  #_=> #object[clojure.lang.Atom 0x2c8c63a3 {:status :ready, :val {:producer nil, :consumer nil}}]
+  @client@client
+  #_=> {:producer nil, :consumer nil}
+  (:producer @client)
+  #_=> nil
+  (:consumer @client)
+  #_=> nil
 
-  (def record (ProducerRecord. (deref topic) (deref k) (deref v)))
-  #_=> #'kafka-clojure-example.core/record
+  (let [producer-props (producer-config kafka-client-config)
+        producer (producer producer-props)]
+    producer)
+  ;; producer start running
 
-  producer
-  #_=> #object[kafka_clojure_example.core$producer 0x2e6a7a37 "kafka_clojure_example.core$producer@2e6a7a37"]
+  ;; test update client
+  (assoc @client :producer 1)
+  #_=> {:producer 1, :consumer nil}
+  @client
+  #_=> {:producer nil, :consumer nil}
 
-  record
-  #_=> #object[org.apache.kafka.clients.producer.ProducerRecord
-          0x55ebe6ff
-          "ProducerRecord(topic=example-topic, partition=null, headers=RecordHeaders(headers = [], isReadOnly = false), key=example-key, value=example-value: hello world!, timestamp=null)"]
+  (swap! client assoc :producer 1)
+  #_=> {:producer 1, :consumer nil}
+  @client
+  #_=> {:producer 1, :consumer nil}
+
+  (swap! @client assoc :producer 2)
+  ;; Execution error (ClassCastException)
+
+  (swap! client :producer (let [producer-props (producer-config kafka-client-config)
+                                   producer (producer producer-props)]
+                               producer))
+  ;; producer starts to run
+
+  (update-producer-client! kafka-client-config client)
+  ;; producer starts to run
+
+  ;; question 2. why now client return 1?
+  @client
+  #_=> 1
 
   ;; run producer
-  (let [props (producer-prop bootstrap-server key-serializer value-serializer)
-        producer (producer props)
-        record (record topic k v)
-        run-producer (.send producer record)]
-    run-producer)
+  (update-producer-client! kafka-client-config client)
 
-  (def consumer (consumer (consumer-prop bootstrap-server key-deserializer value-deserializer group-id)))
-
-  (consumer-subscribe topic consumer)
-
-  duration
-  #_=> #object[clojure.lang.Atom 0x36cc27ea {:status :ready, :val #object[java.time.Duration 0x35aa72a1 "PT1S"]}]
-
-  (consumer-message consumer duration)
-
-  #_org.apache.kafka.clients.consumer.ConsumerRecords
-  (let [records (.poll consumer (deref duration))]
-   (println records))
-  #_#object[org.apache.kafka.clients.consumer.ConsumerRecords 0xd8d5fbb org.apache.kafka.clients.consumer.ConsumerRecords@d8d5fbb]
-
-  (let [records (.poll consumer (deref duration))]
-    (println (type (iterator-seq (.iterator records)))))
+  ;; send record
+  (let [producer (:producer @client)
+        producer-record (ProducerRecord. "example-topic" "example-key" "example-value: hello world!")
+        send-record (.send producer producer-record)]
+    send-record)
 
 
-  (let [records (.poll consumer (deref duration))
-        seq-records (iterator-seq (.iterator records))]
-    (println "key: " map #(.key %) seq-records)
-    (println "value: " map #(.value %) seq-records))
+  ;; producer functions that may not be useful:
+  (defn close-producer
+    [producer]
+    (.close producer))
+
+  (consumer-config kafka-client-config)
+  #_=>
+  {"key.deserializer" "org.apache.kafka.common.serialization.StringDeserializer",
+   "bootstrap.servers" "127.0.0.1:9092",
+   "group.id" "clojure_example_group",
+   "value.deserializer" "org.apache.kafka.common.serialization.StringDeserializer"}
+
+  (consumer (consumer-config kafka-client-config))
+  #_=> #object[org.apache.kafka.clients.consumer.KafkaConsumer
+          0x6f2ef34b
+          "org.apache.kafka.clients.consumer.KafkaConsumer@6f2ef34b"]
+
+  @client
+  #_=> {:producer nil, :consumer nil}
+
+  (update-consumer-client! kafka-client-config client)
+
+  ;; don't think this is right.
+  @client
+  #_=> nil
+
+  (let [producer (:producer @client)
+        producer-record (ProducerRecord. "example-topic" "example-key" "example-value: hello world!")
+        send-record (.send producer producer-record)]
+    send-record)
+
+  (let [consumer (:consumer @client)
+        consumer-subscribe (.subscribe consumer "example-topic")
+        consume-message (consumer-message consumer)]
+    consume-message)
 
   )
+
