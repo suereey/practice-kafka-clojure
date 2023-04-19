@@ -9,6 +9,7 @@
                  [org.apache.kafka/kafka-clients "3.4.0"]
                  [org.slf4j/slf4j-api "1.7.32"]
                  [ch.qos.logback/logback-classic "1.2.6"]
+                 [mount "0.1.13"]
                  ]
   ;:main ^:skip-aot kafka-clojure-example.core
   :target-path "target/%s"

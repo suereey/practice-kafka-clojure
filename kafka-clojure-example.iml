@@ -20,6 +20,7 @@
     <orderEntry type="library" name="Leiningen: ch.qos.logback/logback-classic:1.2.6" level="project" />
     <orderEntry type="library" name="Leiningen: ch.qos.logback/logback-core:1.2.6" level="project" />
     <orderEntry type="library" name="Leiningen: com.github.luben/zstd-jni:1.5.2-1" level="project" />
+    <orderEntry type="library" name="Leiningen: mount:0.1.13" level="project" />
     <orderEntry type="library" name="Leiningen: nrepl:1.0.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.apache.kafka/kafka-clients:3.4.0" level="project" />
     <orderEntry type="library" name="Leiningen: org.clojure/clojure:1.11.1" level="project" />
