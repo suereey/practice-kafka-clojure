@@ -1,4 +1,4 @@
-(ns kafka-clojure-example.draft-v2-kafka
+(ns kafka-clojure-example.draft-v3-kafka
   (:gen-class)
   (:import (java.time Duration)
            (org.apache.kafka.clients.producer KafkaProducer ProducerConfig ProducerRecord)
@@ -15,13 +15,6 @@
 
 (def client (atom {:producer nil
                    :consumer nil}))
-
-
-(def msg-count (atom 0))
-
-(defn count-msg!
-  []
-  (swap! msg-count inc))
 
 
 (defn build-producer
@@ -60,8 +53,6 @@
   (let [producer-record (ProducerRecord. "example-topic" "example-key" message)]
     (.send producer producer-record)))
 
-
-
 (defn consume-message [consumer]
   (.subscribe consumer ["example-topic"])
   (let [records     (.poll consumer (Duration/ofMillis 1000))
@@ -71,9 +62,6 @@
 
 ;; Rich Commenting Block
 (comment
-
-  ;(mount/stop)
-  ;(mount/start)
 
   @client
   #_=> {:producer nil, :consumer nil}
@@ -135,5 +123,15 @@
   (defn close-producer
     [producer]
     (.close producer))
+
+  ;; figure out how to use the following functions
+  (def msg-count (atom 0))
+
+  (defn count-msg!
+    []
+    (swap! msg-count inc))
+
+  ;(mount/stop)
+  ;(mount/start)
   )
 
